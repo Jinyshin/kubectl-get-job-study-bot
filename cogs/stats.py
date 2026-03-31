@@ -18,6 +18,11 @@ class Stats(commands.Cog):
             return
 
         target = 멤버 or interaction.user
+
+        if target.bot:
+            await interaction.response.send_message(
+                "봇의 통계는 조회할 수 없습니다.", ephemeral=True)
+            return
         now = datetime.now(config.KST)
         today = now.date()
         week_start = today - timedelta(days=today.weekday())
