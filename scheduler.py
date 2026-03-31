@@ -94,7 +94,12 @@ def setup_scheduler(bot):
         else:
             msg = await channel.send(f"💻 **{today} 코테 인증 스레드**\n오늘도 코테 풀자~!")
 
-        await msg.create_thread(name=f"{today} 코테 인증")
+        thread = await msg.create_thread(name=f"{today} 코테 인증")
+        with get_conn() as conn:
+            c = conn.cursor()
+            c.execute("INSERT INTO ct_threads (date, thread_id) VALUES (?, ?)",
+                      (now.date(), str(thread.id)))
+            conn.commit()
 
     # 매일 18:00 — 운동 알림
     @scheduler.scheduled_job(CronTrigger(hour=18, minute=0))
@@ -107,10 +112,16 @@ def setup_scheduler(bot):
     # 매일 23:00 — 코테 + 데일리 인증 마감 알림
     @scheduler.scheduled_job(CronTrigger(hour=23, minute=0))
     async def night_remind():
-        # 코테 미인증자 멘션
-        channel_coding = bot.get_channel(config.CH_CODING)
-        if channel_coding:
-            await channel_coding.send("아직 안풀었나여? 한 시간 남았는데 빨리 푸시죠")
+        # 오늘자 코테 스레드에 알림
+        now = datetime.now(config.KST)
+        with get_conn() as conn:
+            c = conn.cursor()
+            c.execute("SELECT thread_id FROM ct_threads WHERE date = ?", (now.date(),))
+            row = c.fetchone()
+        if row:
+            thread = bot.get_channel(int(row[0]))
+            if thread:
+                await thread.send("아직 안풀었나여? 한 시간 남았는데 빨리 푸시죠")
 
         # 데일리 마감 알림
         channel_daily = bot.get_channel(config.CH_DAILY)

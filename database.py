@@ -45,6 +45,11 @@ def init_db():
                 message_id   TEXT PRIMARY KEY,
                 week_start   DATE
             );
+
+            CREATE TABLE IF NOT EXISTS ct_threads (
+                date         DATE PRIMARY KEY,
+                thread_id    TEXT NOT NULL
+            );
         """)
 
         conn.commit()
