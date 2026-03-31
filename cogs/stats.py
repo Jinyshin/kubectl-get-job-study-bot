@@ -12,6 +12,11 @@ class Stats(commands.Cog):
     @app_commands.command(name="통계", description="개인 주간 통계를 조회합니다.")
     async def stats(self, interaction: discord.Interaction, 멤버: discord.Member = None):
 
+        if interaction.channel_id != config.CH_STATS:
+            await interaction.response.send_message(
+                f"<#{config.CH_STATS}> 채널에서만 사용 가능합니다.", ephemeral=True)
+            return
+
         target = 멤버 or interaction.user
         now = datetime.now(config.KST)
         today = now.date()

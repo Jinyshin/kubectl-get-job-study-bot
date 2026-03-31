@@ -12,6 +12,11 @@ class Wake(commands.Cog):
     @app_commands.command(name="기상인증", description="현재 시간이 보이는 사진을 첨부해주세요.")
     async def wake_cert(self, interaction: discord.Interaction, 인증사진: discord.Attachment):
 
+        if not (hasattr(interaction.channel, 'parent_id') and interaction.channel.parent_id == config.CH_WAKE):
+            await interaction.response.send_message(
+                f"<#{config.CH_WAKE}> 채널의 스레드에서만 사용 가능합니다.", ephemeral=True)
+            return
+
         # 이미지 파일인지 확인
         if not 인증사진.content_type or not 인증사진.content_type.startswith("image/"):
             await interaction.response.send_message("이미지 파일만 첨부 가능합니다.", ephemeral=True)

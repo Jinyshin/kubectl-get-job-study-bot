@@ -47,6 +47,10 @@ class Daily(commands.Cog):
 
     @app_commands.command(name="데일리인증", description="오늘 한 것을 기록합니다.")
     async def daily_cert(self, interaction: discord.Interaction):
+        if interaction.channel_id != config.CH_DAILY:
+            await interaction.response.send_message(
+                f"<#{config.CH_DAILY}> 채널에서만 사용 가능합니다.", ephemeral=True)
+            return
         await interaction.response.send_modal(DailyModal())
 
 async def setup(bot):
