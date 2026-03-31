@@ -1,5 +1,4 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 from apscheduler.events import EVENT_JOB_ERROR
 import config
 from database import get_conn
@@ -13,7 +12,7 @@ scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 def setup_scheduler(bot):
 
     # 토요일 09:00 — 기상 챌린지 참여자 모집
-    @scheduler.scheduled_job(CronTrigger(day_of_week="sat", hour=9, minute=0))
+    @scheduler.scheduled_job('cron', day_of_week="sat", hour=9, minute=0)
     async def wake_recruit():
         channel = bot.get_channel(config.CH_WAKE)
         if not channel:
@@ -36,7 +35,7 @@ def setup_scheduler(bot):
             conn.commit()
 
     # 월~금 06:00 — 기상 인증 스레드 생성
-    @scheduler.scheduled_job(CronTrigger(day_of_week="mon-fri", hour=6, minute=0))
+    @scheduler.scheduled_job('cron', day_of_week="mon-fri", hour=6, minute=0)
     async def wake_thread():
         channel = bot.get_channel(config.CH_WAKE)
         if not channel:
@@ -46,7 +45,7 @@ def setup_scheduler(bot):
         await msg.create_thread(name=f"{today} 기상 인증")
 
     # 월~금 09:00 — 기상 미인증자 멘션
-    @scheduler.scheduled_job(CronTrigger(day_of_week="mon-fri", hour=9, minute=0))
+    @scheduler.scheduled_job('cron', day_of_week="mon-fri", hour=9, minute=0)
     async def wake_remind():
         channel = bot.get_channel(config.CH_WAKE)
         if not channel:
@@ -70,7 +69,7 @@ def setup_scheduler(bot):
             await channel.send(f"{mentions}\n일어나세요!!!! 아침이 밝았습니다☀️")
 
     # 매일 06:00 — 코테 인증 스레드 생성 + 전날 인증자 멘션
-    @scheduler.scheduled_job(CronTrigger(hour=6, minute=0))
+    @scheduler.scheduled_job('cron', hour=6, minute=0)
     async def coding_thread():
         channel = bot.get_channel(config.CH_CODING)
         if not channel:
@@ -102,7 +101,7 @@ def setup_scheduler(bot):
             conn.commit()
 
     # 매일 18:00 — 운동 알림
-    @scheduler.scheduled_job(CronTrigger(hour=18, minute=0))
+    @scheduler.scheduled_job('cron', hour=18, minute=0)
     async def exercise_remind():
         channel = bot.get_channel(config.CH_FREE)
         if not channel:
@@ -110,7 +109,7 @@ def setup_scheduler(bot):
         await channel.send("🏃 @everyone 고생하셨슴다~ 저녁 먹기 전에 잠깐 운동하고 오시죠 ㅎㅎ")
 
     # 매일 23:00 — 코테 + 데일리 인증 마감 알림
-    @scheduler.scheduled_job(CronTrigger(hour=23, minute=0))
+    @scheduler.scheduled_job('cron', hour=23, minute=0)
     async def night_remind():
         # 오늘자 코테 스레드에 알림
         now = datetime.now(config.KST)
@@ -129,7 +128,7 @@ def setup_scheduler(bot):
             await channel_daily.send("🌙 @everyone 오늘이 가기 전에 `/데일리인증` 해주세요!")
 
     # 일요일 09:00 — 주간 통계 발행
-    @scheduler.scheduled_job(CronTrigger(day_of_week="sun", hour=9, minute=0))
+    @scheduler.scheduled_job('cron', day_of_week="sun", hour=9, minute=0)
     async def weekly_stats():
         channel = bot.get_channel(config.CH_STATS)
         if not channel:
