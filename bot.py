@@ -78,7 +78,17 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
         if not row:
             return
 
-        # 참여 취소
+        # 메시지에 남은 리액션 확인
+        channel = bot.get_channel(payload.channel_id)
+        if not channel:
+            return
+        message = await channel.fetch_message(payload.message_id)
+        for reaction in message.reactions:
+            users = [user async for user in reaction.users()]
+            if any(user.id == payload.user_id for user in users):
+                return  # 아직 다른 리액션이 남아있으면 취소 안 함
+
+        # 모든 리액션을 뺐을 때만 참여 취소
         c.execute("DELETE FROM weekly_participants WHERE discord_id = ? AND week_start = ?",
                   (str(payload.user_id), row[0]))
         conn.commit()
