@@ -32,6 +32,7 @@ CH_CODING = int(os.getenv("CH_CODING", 0))
 CH_DAILY  = int(os.getenv("CH_DAILY", 0))
 CH_STATS  = int(os.getenv("CH_STATS", 0))
 CH_FREE   = int(os.getenv("CH_FREE", 0))
+GUILD_ID  = int(os.getenv("GUILD_ID", 0))
 
 for var, name in _CHANNEL_VARS.items():
     if not globals()[var]:
