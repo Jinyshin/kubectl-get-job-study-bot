@@ -17,9 +17,12 @@ async def on_ready():
     print(f"봇 시작됨: {bot.user}")
 
     if not _synced:
-        await bot.tree.sync()
-        _synced = True
-        print("슬래시 커맨드 동기화 완료")
+        try:
+            synced = await bot.tree.sync()
+            _synced = True
+            print(f"슬래시 커맨드 동기화 완료: {len(synced)}개 커맨드")
+        except Exception as e:
+            print(f"슬래시 커맨드 동기화 실패: {e}")
 
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
