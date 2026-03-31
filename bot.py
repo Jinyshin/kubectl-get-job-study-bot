@@ -19,6 +19,8 @@ async def on_ready():
     if not _synced:
         try:
             guild = discord.Object(id=config.GUILD_ID) if config.GUILD_ID else None
+            if guild:
+                bot.tree.copy_global_to(guild=guild)
             synced = await bot.tree.sync(guild=guild)
             _synced = True
             print(f"슬래시 커맨드 동기화 완료: {len(synced)}개 커맨드")
