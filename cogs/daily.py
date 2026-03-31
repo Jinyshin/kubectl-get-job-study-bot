@@ -33,9 +33,9 @@ class DailyModal(discord.ui.Modal, title="데일리 인증"):
         # 날짜 포맷
         today = now.strftime("%y.%m.%d")
 
-        # 내용 줄별로 파싱
+        # 내용 줄별로 파싱 (이미 -로 시작하면 그대로, 아니면 - 붙임)
         lines = [line.strip() for line in self.content.value.strip().splitlines() if line.strip()]
-        content_str = "\n".join([f"- {line}" for line in lines])
+        content_str = "\n".join([line if line.startswith("-") else f"- {line}" for line in lines])
 
         await interaction.response.send_message(
             f"**{today} | {interaction.user.mention} {total + 1}번째 데일리 인증**\n{content_str}"
