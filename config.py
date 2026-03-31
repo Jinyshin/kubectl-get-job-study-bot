@@ -25,14 +25,18 @@ _CHANNEL_VARS = {
     "CH_DAILY": "데일리 인증",
     "CH_STATS": "주간 통계",
     "CH_FREE": "자유",
+    "CH_WELCOME": "환영",
 }
 
 CH_WAKE   = int(os.getenv("CH_WAKE", 0))
 CH_CODING = int(os.getenv("CH_CODING", 0))
 CH_DAILY  = int(os.getenv("CH_DAILY", 0))
 CH_STATS  = int(os.getenv("CH_STATS", 0))
-CH_FREE   = int(os.getenv("CH_FREE", 0))
-GUILD_ID  = int(os.getenv("GUILD_ID", 0))
+CH_FREE    = int(os.getenv("CH_FREE", 0))
+CH_WELCOME = int(os.getenv("CH_WELCOME", 0))
+GUILD_ID   = int(os.getenv("GUILD_ID", 0))
+
+WELCOME_GUIDE_URL = os.getenv("WELCOME_GUIDE_URL", "")
 
 for var, name in _CHANNEL_VARS.items():
     if not globals()[var]:

@@ -30,6 +30,16 @@ async def on_ready():
             print(f"슬래시 커맨드 동기화 실패: {e}")
 
 @bot.event
+async def on_member_join(member: discord.Member):
+    channel = bot.get_channel(config.CH_WELCOME)
+    if not channel:
+        return
+    await channel.send(
+        f"환영합니다, {member.mention}님! "
+        f"[서버 활용법]({config.WELCOME_GUIDE_URL})을 먼저 확인해주세요\U0001f600"
+    )
+
+@bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     # 봇 자신의 리액션은 무시
     if payload.user_id == bot.user.id:
