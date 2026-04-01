@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import random
 import config
 import database
 from scheduler import setup_scheduler
@@ -29,15 +30,27 @@ async def on_ready():
         except Exception as e:
             print(f"슬래시 커맨드 동기화 실패: {e}")
 
+_WELCOME_MESSAGES = [
+    "{mention}님 어서오세요! 먼저 [서버 활용법]({url})을 확인해주세요",
+    "{mention}님 반가워요! [서버 활용법]({url}) 한번 읽어봐주세요",
+    "{mention}님 환영해요! [서버 활용법]({url})부터 확인해주세요",
+    "{mention}님이 나타났다! [서버 활용법]({url}) 먼저 확인 부탁드려요",
+    "{mention}님 입장! [서버 활용법]({url})을 먼저 확인해주세요",
+    "{mention}님 오셨군요! [서버 활용법]({url}) 확인부터 해주세요",
+    "어서와요 {mention}님! [서버 활용법]({url})을 먼저 읽어봐주세요",
+    "새로운 동료 {mention}님! [서버 활용법]({url}) 먼저 확인해주세요",
+    "반가워요 {mention}님! [서버 활용법]({url})부터 확인해주세요",
+]
+_WELCOME_EMOJIS = ["\U0001f44b", "\U0001f389", "\u2728", "\U0001f64c", "\U0001f4aa", "\U0001f917", "\U0001fae1", "\U0001f60a"]
+
 @bot.event
 async def on_member_join(member: discord.Member):
     channel = bot.get_channel(config.CH_WELCOME)
     if not channel:
         return
-    await channel.send(
-        f"환영합니다, {member.mention}님! "
-        f"[서버 활용법]({config.WELCOME_GUIDE_URL})을 먼저 확인해주세요\U0001f600"
-    )
+    msg = random.choice(_WELCOME_MESSAGES).format(mention=member.mention, url=config.WELCOME_GUIDE_URL)
+    emoji = random.choice(_WELCOME_EMOJIS)
+    await channel.send(f"{msg} {emoji}")
 
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
