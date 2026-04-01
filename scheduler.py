@@ -106,7 +106,7 @@ def setup_scheduler(bot):
         channel = bot.get_channel(config.CH_FREE)
         if not channel:
             return
-        await channel.send("🏃 @everyone 고생하셨슴다~ 저녁 먹기 전에 잠깐 운동하고 오시죠 ㅎㅎ")
+        await channel.send("🏃 고생하셨슴다~ 저녁 먹기 전에 잠깐 운동하고 오시죠 ㅎㅎ")
 
     # 매일 23:00 — 코테 + 데일리 인증 마감 알림
     @scheduler.scheduled_job('cron', hour=23, minute=0)
@@ -125,7 +125,7 @@ def setup_scheduler(bot):
         # 데일리 마감 알림
         channel_daily = bot.get_channel(config.CH_DAILY)
         if channel_daily:
-            await channel_daily.send("🌙 @everyone 오늘이 가기 전에 `/데일리인증` 해주세요!")
+            await channel_daily.send("🌙 오늘이 가기 전에 `/데일리인증` 해주세요!")
 
     # 일요일 09:00 — 주간 통계 발행
     @scheduler.scheduled_job('cron', day_of_week="sun", hour=9, minute=0)
