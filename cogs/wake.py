@@ -9,7 +9,7 @@ class Wake(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="기상인증", description="현재 시간이 보이는 사진을 첨부해주세요.")
-    async def wake_cert(self, interaction: discord.Interaction, 인증사진: discord.Attachment):
+    async def wake_cert(self, interaction: discord.Interaction, 인증사진: discord.Attachment, 메모: str = None):
 
         if not (hasattr(interaction.channel, 'parent_id') and interaction.channel.parent_id == config.CH_WAKE):
             await interaction.response.send_message(
@@ -41,8 +41,11 @@ class Wake(commands.Cog):
             await interaction.response.send_message("오늘 이미 기상 인증을 완료했습니다 ✅", ephemeral=True)
             return
 
+        msg = f"☀️ {interaction.user.mention} 기상 인증 완료!"
+        if 메모:
+            msg += f"\n{메모}"
         await interaction.response.send_message(
-            f"☀️ {interaction.user.mention} 기상 인증 완료!",
+            msg,
             files=[await 인증사진.to_file()]
         )
 
