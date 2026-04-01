@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime, timedelta
+from datetime import timedelta
 import config
 import database
 
@@ -24,7 +24,7 @@ class Coding(commands.Cog):
 
         with database.get_conn() as conn:
             c = conn.cursor()
-            now = datetime.now(config.KST)
+            now = config.now_kst()
             today = now.date()
             week_start = today - timedelta(days=today.weekday())
 

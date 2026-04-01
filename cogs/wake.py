@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime
 import config
 import database
 
@@ -22,7 +21,7 @@ class Wake(commands.Cog):
             await interaction.response.send_message("이미지 파일만 첨부 가능합니다.", ephemeral=True)
             return
 
-        now = datetime.now(config.KST)
+        now = config.now_kst()
         today = now.date()
 
         with database.get_conn() as conn:

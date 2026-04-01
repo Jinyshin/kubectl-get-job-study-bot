@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from zoneinfo import ZoneInfo
+from datetime import datetime
 import os
 import logging
 
@@ -8,6 +9,10 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 KST = ZoneInfo("Asia/Seoul")
+
+def now_kst():
+    """현재 KST 시간을 timezone offset 없이 반환 (SQLite DATE() 호환)"""
+    return datetime.now(KST).replace(tzinfo=None)
 
 _KR_WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 

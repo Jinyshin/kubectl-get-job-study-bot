@@ -26,7 +26,7 @@ def setup_scheduler(bot):
         await msg.add_reaction("✅")
 
         # 다음 주 월요일을 week_start로 저장
-        now = datetime.now(config.KST)
+        now = config.now_kst()
         next_monday = (now + timedelta(days=(7 - now.weekday()))).date()
         with get_conn() as conn:
             c = conn.cursor()
@@ -40,7 +40,7 @@ def setup_scheduler(bot):
         channel = bot.get_channel(config.CH_WAKE)
         if not channel:
             return
-        today = config.format_date(datetime.now(config.KST))
+        today = config.format_date(config.now_kst())
         msg = await channel.send(f"☀️ {today} 기상 인증 스레드")
         await msg.create_thread(name=f"{today} 기상 인증")
 
@@ -52,7 +52,7 @@ def setup_scheduler(bot):
             return
 
         # 이번 주 참여자 + 오늘 인증한 사람 조회
-        now = datetime.now(config.KST)
+        now = config.now_kst()
         week_start = (now - timedelta(days=now.weekday())).date()
         today = now.date()
         with get_conn() as conn:
@@ -66,7 +66,7 @@ def setup_scheduler(bot):
         not_certified = [p for p in participants if p not in certified]
         if not_certified:
             mentions = " ".join([f"<@{uid}>" for uid in not_certified])
-            await channel.send(f"{mentions}\n일어나세요!!!! 아침이 밝았습니다☀️")
+            await channel.send(f"{mentions}\n일어나세요!!!! 아침이 밝았습니다")
 
     # 매일 06:00 — 코테 인증 스레드 생성 + 전날 인증자 멘션
     @scheduler.scheduled_job('cron', hour=6, minute=0)
@@ -74,7 +74,7 @@ def setup_scheduler(bot):
         channel = bot.get_channel(config.CH_CODING)
         if not channel:
             return
-        now = datetime.now(config.KST)
+        now = config.now_kst()
         today = config.format_date(now)
         yesterday = (now - timedelta(days=1)).date()
 
@@ -112,7 +112,7 @@ def setup_scheduler(bot):
     @scheduler.scheduled_job('cron', hour=23, minute=0)
     async def night_remind():
         # 오늘자 코테 스레드에 알림
-        now = datetime.now(config.KST)
+        now = config.now_kst()
         with get_conn() as conn:
             c = conn.cursor()
             c.execute("SELECT thread_id FROM ct_threads WHERE date = ?", (now.date(),))
@@ -133,7 +133,7 @@ def setup_scheduler(bot):
         channel = bot.get_channel(config.CH_STATS)
         if not channel:
             return
-        now = datetime.now(config.KST)
+        now = config.now_kst()
         week_start = (now - timedelta(days=now.weekday())).date()
         week_end_fri = week_start + timedelta(days=4)   # 기상: 월~금
         week_end_sun = week_start + timedelta(days=6)   # 코테: 월~일

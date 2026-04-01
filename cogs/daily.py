@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime
 import config
 import database
 
@@ -15,7 +14,7 @@ class DailyModal(discord.ui.Modal, title="데일리 인증"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        now = datetime.now(config.KST)
+        now = config.now_kst()
 
         with database.get_conn() as conn:
             c = conn.cursor()
