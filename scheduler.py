@@ -135,58 +135,61 @@ def setup_scheduler(bot):
             return
         now = config.now_kst()
         week_start = (now - timedelta(days=now.weekday())).date()
-        week_end_fri = week_start + timedelta(days=4)   # 기상: 월~금
-        week_end_sun = week_start + timedelta(days=6)   # 코테: 월~일
+        week_end_fri = week_start + timedelta(days=4)
+        week_end_sun = week_start + timedelta(days=6)
 
         with get_conn() as conn:
             c = conn.cursor()
 
-            # 기상 달성률 (월~금)
-            c.execute("SELECT discord_id FROM weekly_participants WHERE week_start = ?", (week_start,))
-            participants = [row[0] for row in c.fetchall()]
-
-            wake_stats = []
-            for uid in participants:
-                c.execute("""
-                    SELECT COUNT(*) FROM wake_logs
-                    WHERE discord_id = ? AND DATE(certified_at) BETWEEN ? AND ?
-                """, (uid, week_start, week_end_fri))
-                count = c.fetchone()[0]
-                wake_stats.append((uid, count))
-
-            wake_stats.sort(key=lambda x: x[1], reverse=True)
-
-            # 코테 횟수 (월~일)
+            # 기상 (월~금)
             c.execute("""
-                SELECT discord_id, COUNT(*) as cnt FROM ct_logs
+                SELECT discord_id, COUNT(*) FROM wake_logs
                 WHERE DATE(certified_at) BETWEEN ? AND ?
                 GROUP BY discord_id
-                ORDER BY cnt DESC
-            """, (week_start, week_end_sun))
-            ct_stats = c.fetchall()
+            """, (week_start, week_end_fri))
+            wake_map = dict(c.fetchall())
 
-        if not wake_stats and not ct_stats:
+            # 코테 (월~일)
+            c.execute("""
+                SELECT discord_id, COUNT(*) FROM ct_logs
+                WHERE DATE(certified_at) BETWEEN ? AND ?
+                GROUP BY discord_id
+            """, (week_start, week_end_sun))
+            ct_map = dict(c.fetchall())
+
+            # 데일리 (월~일)
+            c.execute("""
+                SELECT discord_id, COUNT(*) FROM daily_logs
+                WHERE DATE(certified_at) BETWEEN ? AND ?
+                GROUP BY discord_id
+            """, (week_start, week_end_sun))
+            daily_map = dict(c.fetchall())
+
+        # 인증 기록이 있는 모든 사람
+        all_uids = set(wake_map) | set(ct_map) | set(daily_map)
+        if not all_uids:
             await channel.send("📊 이번 주는 인증 기록이 없습니다.")
             return
 
-        # 메시지 생성
-        lines = [f"📊 **이번 주 스터디 현황** ({week_start} ~ {week_end_sun}, 일요일 오전 기준)\n"]
+        # 총합 높은 순 정렬
+        stats = []
+        for uid in all_uids:
+            w = wake_map.get(uid, 0)
+            ct = ct_map.get(uid, 0)
+            d = daily_map.get(uid, 0)
+            stats.append((uid, w, ct, d, w + ct + d))
+        stats.sort(key=lambda x: x[4], reverse=True)
 
-        lines.append("**기상 챌린지 달성률**")
-        if wake_stats:
-            for i, (uid, count) in enumerate(wake_stats):
-                bar = "█" * (count * 2) + "░" * ((5 - count) * 2)
-                pct = int(count / 5 * 100)
-                lines.append(f"{i+1}등 <@{uid}>  {bar} {count}/5 ({pct}%)")
-        else:
-            lines.append("이번 주 참여자가 없습니다.")
+        week_start_fmt = config.format_date(datetime.combine(week_start, datetime.min.time()))
+        week_end_fmt = config.format_date(datetime.combine(week_end_sun, datetime.min.time()))
+        lines = [f"📊 **이번 주 스터디 현황** ({week_start_fmt} ~ {week_end_fmt})\n"]
 
-        lines.append("\n**코테 인증 횟수**")
-        if ct_stats:
-            for i, (uid, count) in enumerate(ct_stats):
-                lines.append(f"{i+1}등 <@{uid}>  {count}회")
-        else:
-            lines.append("이번 주 인증자가 없습니다.")
+        for uid, w, ct, d, _ in stats:
+            parts = []
+            if w: parts.append(f"기상 {w}회")
+            if ct: parts.append(f"코테 {ct}회")
+            if d: parts.append(f"데일리 {d}회")
+            lines.append(f"<@{uid}> — {' | '.join(parts)}")
 
         await channel.send("\n".join(lines))
 
