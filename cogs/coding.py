@@ -22,6 +22,8 @@ class Coding(commands.Cog):
             await interaction.response.send_message("이미지 파일만 첨부 가능합니다.", ephemeral=True)
             return
 
+        await interaction.response.defer()
+
         with database.get_conn() as conn:
             c = conn.cursor()
             now = config.now_kst()
@@ -40,9 +42,9 @@ class Coding(commands.Cog):
                       (str(interaction.user.id), now))
             conn.commit()
 
-        await interaction.response.send_message(
-            f"💻 {interaction.user.mention} 코테 인증 완료! (이번 주 {week_count + 1}회째)",
-            files=[await 인증사진.to_file()]
+        await interaction.edit_original_response(
+            content=f"💻 {interaction.user.mention} 코테 인증 완료! (이번 주 {week_count + 1}회째)",
+            attachments=[await 인증사진.to_file()]
         )
 
 async def setup(bot):
