@@ -43,6 +43,10 @@ _WELCOME_MESSAGES = [
 ]
 _WELCOME_EMOJIS = ["\U0001f44b", "\U0001f389", "\u2728", "\U0001f64c", "\U0001f4aa", "\U0001f917", "\U0001fae1", "\U0001f60a"]
 
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: Exception):
+    print(f"슬래시 커맨드 에러 [{interaction.command.name}]: {error}")
+
 @bot.event
 async def on_member_join(member: discord.Member):
     channel = bot.get_channel(config.CH_WELCOME)
