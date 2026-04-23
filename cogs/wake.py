@@ -41,15 +41,10 @@ class Wake(commands.Cog):
             await interaction.response.send_message("오늘 이미 기상 인증을 완료했습니다 ✅", ephemeral=True)
             return
 
-        await interaction.response.defer()
-
-        msg = f"☀️ {interaction.user.mention} 기상 인증 완료!"
+        msg = f"☀️ {interaction.user.mention} 기상 인증 완료!\n{인증사진.url}"
         if 메모:
             msg += f"\n{메모}"
-        await interaction.edit_original_response(
-            content=msg,
-            attachments=[await 인증사진.to_file()]
-        )
+        await interaction.response.send_message(msg)
 
 async def setup(bot):
     await bot.add_cog(Wake(bot))
