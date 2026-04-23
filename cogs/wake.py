@@ -41,10 +41,12 @@ class Wake(commands.Cog):
             await interaction.response.send_message("오늘 이미 기상 인증을 완료했습니다 ✅", ephemeral=True)
             return
 
-        msg = f"☀️ {interaction.user.mention} 기상 인증 완료!\n{인증사진.url}"
+        msg = f"☀️ {interaction.user.mention} 기상 인증 완료!"
         if 메모:
             msg += f"\n{메모}"
-        await interaction.response.send_message(msg)
+        embed = discord.Embed()
+        embed.set_image(url=인증사진.url)
+        await interaction.response.send_message(msg, embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Wake(bot))

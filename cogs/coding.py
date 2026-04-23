@@ -40,8 +40,11 @@ class Coding(commands.Cog):
                       (str(interaction.user.id), now))
             conn.commit()
 
+        embed = discord.Embed()
+        embed.set_image(url=인증사진.url)
         await interaction.response.send_message(
-            f"💻 {interaction.user.mention} 코테 인증 완료! (이번 주 {week_count + 1}회째)\n{인증사진.url}"
+            f"💻 {interaction.user.mention} 코테 인증 완료! (이번 주 {week_count + 1}회째)",
+            embed=embed
         )
 
 async def setup(bot):
