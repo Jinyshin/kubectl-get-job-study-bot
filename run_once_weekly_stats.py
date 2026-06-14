@@ -21,14 +21,19 @@ async def main():
 
     @client.event
     async def on_ready():
+        print(f"[run_once] on_ready 진입: {client.user}", flush=True)
         database.init_db()
-        # 방금 로그인한 직후라 멤버 캐시가 비어 있을 수 있어 강제 로드
+        # discord.py가 시작 시 멤버를 자동 청크(chunk_guilds_at_startup 기본 True)하므로
+        # on_ready 시점엔 guild.members가 이미 채워져 있다. 수동 chunk는 불필요.
         guild = client.get_guild(config.GUILD_ID)
-        if guild:
-            await guild.chunk()
+        members = len(guild.members) if guild else 0
+        print(f"[run_once] guild={guild}, 캐시된 멤버 수={members}", flush=True)
+        print(f"[run_once] run_weekly_stats 실행 (dry_run={dry_run})", flush=True)
         await run_weekly_stats(client, dry_run=dry_run)
+        print("[run_once] 완료, 종료합니다.", flush=True)
         await client.close()
 
+    print("[run_once] 디스코드 연결 시도 중...", flush=True)
     await client.start(config.TOKEN)
 
 asyncio.run(main())
