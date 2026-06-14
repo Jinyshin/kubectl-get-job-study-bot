@@ -14,7 +14,8 @@ Discord 스터디 서버 운영을 위해 만든 Python 봇입니다.
 - 코딩테스트 인증 스레드 생성
 - 데일리 인증 기록
 - 개인별 주간/누적 통계 조회
-- 주간 전체 통계 발행
+- 주간 전체 통계 발행 (메시지 활동 포함)
+- 미참여자 청문회 소환
 
 ## 사용 기술
 
@@ -71,6 +72,9 @@ CH_STATS=
 CH_FREE=
 CH_WELCOME=
 
+CH_ACTIVITY="111:채용공고 공유,222:지원후기 공유,333:운동,444:계획,555:정보 공유"
+EXCLUDE_ROLE_IDS=
+
 WELCOME_GUIDE_URL=
 ```
 
@@ -84,6 +88,8 @@ WELCOME_GUIDE_URL=
 | `CH_STATS` | 통계 채널 ID |
 | `CH_FREE` | 자유 채널 ID |
 | `CH_WELCOME` | 신규 멤버 환영 채널 ID |
+| `CH_ACTIVITY` | 활동 인정 채널. `ID:표시이름` 페어를 콤마로 나열 (공백 포함 시 따옴표 필수) |
+| `EXCLUDE_ROLE_IDS` | 소환 제외 역할 ID(콤마 구분). 멘토·운영진 등 |
 | `WELCOME_GUIDE_URL` | 서버 활용 가이드 링크 |
 
 `DISCORD_TOKEN`은 필수입니다. 채널 ID가 비어 있으면 해당 채널을 사용하는 기능은 동작하지 않습니다.
@@ -98,6 +104,7 @@ WELCOME_GUIDE_URL=
 - `daily_logs`: 데일리 인증 기록
 - `wake_recruit_messages`: 기상 챌린지 모집 메시지
 - `ct_threads`: 날짜별 코딩테스트 인증 스레드
+- `study_activity`: 자유 메시지 채널 활동 기록 (미참여자 판정용)
 
 ## 주요 명령어
 

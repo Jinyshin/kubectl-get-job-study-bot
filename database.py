@@ -50,6 +50,13 @@ def init_db():
                 date         DATE PRIMARY KEY,
                 thread_id    TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS study_activity (
+                message_id   TEXT PRIMARY KEY,
+                discord_id   TEXT NOT NULL,
+                channel_id   TEXT NOT NULL,
+                created_at   DATETIME NOT NULL
+            );
         """)
 
         conn.commit()

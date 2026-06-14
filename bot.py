@@ -110,6 +110,26 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
                   (str(payload.user_id), row[0]))
         conn.commit()
 
+@bot.event
+async def on_message(message: discord.Message):
+    # 봇 메시지 / DM 무시
+    if message.author.bot or message.guild is None:
+        return
+    # 인정 채널(CH_ACTIVITY)이 아니면 무시
+    if message.channel.id not in config.CH_ACTIVITY:
+        return
+
+    # 인정 채널의 일반 메시지를 활동으로 기록 (같은 메시지 재수신 시 중복 방지)
+    with database.get_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            "INSERT OR IGNORE INTO study_activity (message_id, discord_id, channel_id, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (str(message.id), str(message.author.id), str(message.channel.id), config.now_kst())
+        )
+        conn.commit()
+    # 이 봇은 전부 slash command라 bot.process_commands(message) 호출은 불필요.
+
 async def main():
     async with bot:
         database.init_db()
