@@ -100,14 +100,6 @@ def setup_scheduler(bot):
                       (now.date(), str(thread.id)))
             conn.commit()
 
-    # 매일 18:00 — 운동 알림
-    @scheduler.scheduled_job('cron', hour=18, minute=0)
-    async def exercise_remind():
-        channel = bot.get_channel(config.CH_FREE)
-        if not channel:
-            return
-        await channel.send("🏃 고생하셨슴다~ 저녁 먹기 전에 잠깐 운동하고 오시죠 ㅎㅎ")
-
     # 매일 23:00 — 코테 + 데일리 인증 마감 알림
     @scheduler.scheduled_job('cron', hour=23, minute=0)
     async def night_remind():

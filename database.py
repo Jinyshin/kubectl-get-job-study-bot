@@ -1,7 +1,13 @@
 import sqlite3
 from contextlib import contextmanager
+from datetime import date, datetime
 
 DB_PATH = "bot.db"
+
+# Python 3.12+에서 기본 date/datetime adapter가 deprecated.
+# 기존 기본 어댑터와 동일한 ISO 포맷으로 명시 등록 → 저장 포맷 변화 없이 경고만 제거.
+sqlite3.register_adapter(date, date.isoformat)
+sqlite3.register_adapter(datetime, lambda dt: dt.isoformat(sep=" "))
 
 @contextmanager
 def get_conn():
