@@ -9,6 +9,129 @@ logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
+async def run_weekly_stats(bot, dry_run=False):
+    """주간 통계 발행 + 청문회 소환. dry_run이면 디스코드 발송 대신 콘솔에 출력."""
+    channel = bot.get_channel(config.CH_STATS)
+    if channel is None and not dry_run:
+        return
+
+    async def emit(text):
+        if dry_run:
+            print(text)
+        else:
+            await channel.send(text)
+
+    now = config.now_kst()
+    week_start = (now - timedelta(days=now.weekday())).date()
+    week_end_fri = week_start + timedelta(days=4)
+    week_end_sun = week_start + timedelta(days=6)
+
+    with get_conn() as conn:
+        c = conn.cursor()
+
+        # 기상 (월~금)
+        c.execute("""
+            SELECT discord_id, COUNT(*) FROM wake_logs
+            WHERE DATE(certified_at) BETWEEN ? AND ?
+            GROUP BY discord_id
+        """, (week_start, week_end_fri))
+        wake_map = dict(c.fetchall())
+
+        # 코테 (월~일)
+        c.execute("""
+            SELECT discord_id, COUNT(*) FROM ct_logs
+            WHERE DATE(certified_at) BETWEEN ? AND ?
+            GROUP BY discord_id
+        """, (week_start, week_end_sun))
+        ct_map = dict(c.fetchall())
+
+        # 데일리 (월~일)
+        c.execute("""
+            SELECT discord_id, COUNT(*) FROM daily_logs
+            WHERE DATE(certified_at) BETWEEN ? AND ?
+            GROUP BY discord_id
+        """, (week_start, week_end_sun))
+        daily_map = dict(c.fetchall())
+
+        # 메시지 활동 (채널별 횟수, 월~일)
+        c.execute("""
+            SELECT discord_id, channel_id, COUNT(*) FROM study_activity
+            WHERE DATE(created_at) BETWEEN ? AND ?
+            GROUP BY discord_id, channel_id
+        """, (week_start, week_end_sun))
+        msg_map = {}  # {uid: {channel_id(int): count}}
+        for uid, cid, cnt in c.fetchall():
+            msg_map.setdefault(uid, {})[int(cid)] = cnt
+
+    week_start_fmt = config.format_date(datetime.combine(week_start, datetime.min.time()))
+    week_end_fmt = config.format_date(datetime.combine(week_end_sun, datetime.min.time()))
+
+    # 커맨드 인증 + 메시지 활동이 있는 모든 사람
+    all_uids = set(wake_map) | set(ct_map) | set(daily_map) | set(msg_map)
+    if not all_uids:
+        await emit("📊 이번 주는 활동 기록이 없습니다.")
+    else:
+        # 총합 높은 순 정렬 (메시지 활동 횟수 포함)
+        stats = []
+        for uid in all_uids:
+            w = wake_map.get(uid, 0)
+            ct = ct_map.get(uid, 0)
+            d = daily_map.get(uid, 0)
+            msg_counts = msg_map.get(uid, {})
+            total = w + ct + d + sum(msg_counts.values())
+            stats.append((uid, w, ct, d, msg_counts, total))
+        stats.sort(key=lambda x: x[5], reverse=True)
+
+        lines = [f"📊 **이번 주 스터디 현황** ({week_start_fmt} ~ {week_end_fmt})\n"]
+        for idx, (uid, w, ct, d, msg_counts, _) in enumerate(stats, start=1):
+            parts = []
+            if w: parts.append(f"기상 {w}회")
+            if ct: parts.append(f"코테 {ct}회")
+            if d: parts.append(f"데일리 {d}회")
+            # 메시지 활동: 채널 표시명 + 횟수
+            for cid, cnt in msg_counts.items():
+                parts.append(f"{config.CH_ACTIVITY.get(cid, '기타')} {cnt}회")
+            lines.append(f"{idx}. <@{uid}> — {' | '.join(parts)}")
+
+        await emit("\n".join(lines))
+
+    # --- 청문회 소환: 모집단 중 이번 주 활동 0회인 멤버 ---
+    guild = bot.get_guild(config.GUILD_ID)
+    if not guild:
+        logger.warning("GUILD_ID 길드를 찾을 수 없어 소환을 건너뜁니다: %s", config.GUILD_ID)
+        return
+
+    # 모집단 = 길드 멤버 − 봇 − 제외 역할. 활동 0회면 소환 대상.
+    summon_targets = []
+    for member in guild.members:
+        if member.bot:
+            continue
+        if any(role.id in config.EXCLUDE_ROLE_IDS for role in member.roles):
+            continue
+        if str(member.id) not in all_uids:
+            summon_targets.append(str(member.id))
+
+    if not summon_targets:
+        if dry_run:
+            print("[dry-run] 소환 대상 없음")
+        return
+
+    mentions = " ".join(f"<@{uid}>" for uid in summon_targets)
+    summon_text = (
+        "⚖️ **지니봇 청문회 소환장**\n\n"
+        "이번 주 스터디 참여 내역이 확인되지 않은 아래 멤버를 소환합니다.\n\n"
+        f"{mentions}\n\n"
+        "오늘 21시까지 이 스레드에 불참 사유를 남기거나 운영진에게 DM 주세요.\n"
+        "응답이 없으면 공지된 규칙에 따라 퇴장 처리됩니다."
+    )
+    if dry_run:
+        print(f"[dry-run] 소환 대상 {len(summon_targets)}명: {summon_targets}")
+        print(summon_text)
+    else:
+        summon_msg = await channel.send(summon_text)
+        await summon_msg.create_thread(name=f"{week_end_fmt} 청문회")
+
+
 def setup_scheduler(bot):
 
     # 토요일 09:00 — 기상 챌린지 참여자 모집
@@ -119,114 +242,10 @@ def setup_scheduler(bot):
         if channel_daily:
             await channel_daily.send("🌙 오늘이 가기 전에 `/데일리인증` 해주세요!")
 
-    # 일요일 09:00 — 주간 통계 발행
+    # 일요일 09:00 — 주간 통계 발행 + 청문회 소환
     @scheduler.scheduled_job('cron', day_of_week="sun", hour=9, minute=0)
     async def weekly_stats():
-        channel = bot.get_channel(config.CH_STATS)
-        if not channel:
-            return
-        now = config.now_kst()
-        week_start = (now - timedelta(days=now.weekday())).date()
-        week_end_fri = week_start + timedelta(days=4)
-        week_end_sun = week_start + timedelta(days=6)
-
-        with get_conn() as conn:
-            c = conn.cursor()
-
-            # 기상 (월~금)
-            c.execute("""
-                SELECT discord_id, COUNT(*) FROM wake_logs
-                WHERE DATE(certified_at) BETWEEN ? AND ?
-                GROUP BY discord_id
-            """, (week_start, week_end_fri))
-            wake_map = dict(c.fetchall())
-
-            # 코테 (월~일)
-            c.execute("""
-                SELECT discord_id, COUNT(*) FROM ct_logs
-                WHERE DATE(certified_at) BETWEEN ? AND ?
-                GROUP BY discord_id
-            """, (week_start, week_end_sun))
-            ct_map = dict(c.fetchall())
-
-            # 데일리 (월~일)
-            c.execute("""
-                SELECT discord_id, COUNT(*) FROM daily_logs
-                WHERE DATE(certified_at) BETWEEN ? AND ?
-                GROUP BY discord_id
-            """, (week_start, week_end_sun))
-            daily_map = dict(c.fetchall())
-
-            # 메시지 활동 (채널별 횟수, 월~일)
-            c.execute("""
-                SELECT discord_id, channel_id, COUNT(*) FROM study_activity
-                WHERE DATE(created_at) BETWEEN ? AND ?
-                GROUP BY discord_id, channel_id
-            """, (week_start, week_end_sun))
-            msg_map = {}  # {uid: {channel_id(int): count}}
-            for uid, cid, cnt in c.fetchall():
-                msg_map.setdefault(uid, {})[int(cid)] = cnt
-
-        week_start_fmt = config.format_date(datetime.combine(week_start, datetime.min.time()))
-        week_end_fmt = config.format_date(datetime.combine(week_end_sun, datetime.min.time()))
-
-        # 커맨드 인증 + 메시지 활동이 있는 모든 사람
-        all_uids = set(wake_map) | set(ct_map) | set(daily_map) | set(msg_map)
-        if not all_uids:
-            await channel.send("📊 이번 주는 활동 기록이 없습니다.")
-        else:
-            # 총합 높은 순 정렬 (메시지 활동 횟수 포함)
-            stats = []
-            for uid in all_uids:
-                w = wake_map.get(uid, 0)
-                ct = ct_map.get(uid, 0)
-                d = daily_map.get(uid, 0)
-                msg_counts = msg_map.get(uid, {})
-                total = w + ct + d + sum(msg_counts.values())
-                stats.append((uid, w, ct, d, msg_counts, total))
-            stats.sort(key=lambda x: x[5], reverse=True)
-
-            lines = [f"📊 **이번 주 스터디 현황** ({week_start_fmt} ~ {week_end_fmt})\n"]
-            for idx, (uid, w, ct, d, msg_counts, _) in enumerate(stats, start=1):
-                parts = []
-                if w: parts.append(f"기상 {w}회")
-                if ct: parts.append(f"코테 {ct}회")
-                if d: parts.append(f"데일리 {d}회")
-                # 메시지 활동: 채널 표시명 + 횟수
-                for cid, cnt in msg_counts.items():
-                    parts.append(f"{config.CH_ACTIVITY.get(cid, '기타')} {cnt}회")
-                lines.append(f"{idx}. <@{uid}> — {' | '.join(parts)}")
-
-            await channel.send("\n".join(lines))
-
-        # --- 청문회 소환: 모집단 중 이번 주 활동 0회인 멤버 ---
-        guild = bot.get_guild(config.GUILD_ID)
-        if not guild:
-            logger.warning("GUILD_ID 길드를 찾을 수 없어 소환을 건너뜁니다: %s", config.GUILD_ID)
-            return
-
-        # 모집단 = 길드 멤버 − 봇 − 제외 역할(운영진 등). 활동 0회면 소환 대상.
-        summon_targets = []
-        for member in guild.members:
-            if member.bot:
-                continue
-            if any(role.id in config.EXCLUDE_ROLE_IDS for role in member.roles):
-                continue
-            if str(member.id) not in all_uids:
-                summon_targets.append(str(member.id))
-
-        if not summon_targets:
-            return
-
-        mentions = " ".join(f"<@{uid}>" for uid in summon_targets)
-        summon_msg = await channel.send(
-            "⚖️ **지니봇 청문회 소환장**\n\n"
-            "이번 주 스터디 참여 내역이 확인되지 않은 아래 멤버를 소환합니다.\n\n"
-            f"{mentions}\n\n"
-            "오늘 21시까지 이 스레드에 불참 사유를 남기거나 운영진에게 DM 주세요.\n"
-            "응답이 없으면 공지된 규칙에 따라 퇴장 처리됩니다."
-        )
-        await summon_msg.create_thread(name=f"{week_end_fmt} 청문회")
+        await run_weekly_stats(bot)
 
     def _job_error_listener(event):
         if event.exception:
